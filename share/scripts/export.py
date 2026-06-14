@@ -6,8 +6,11 @@ This module is designed to be imported inside an `execute_code` block. The calle
 is responsible for retrieving session data via the `session_search` tool first.
 
 Example:
-    import sys, os
-    sys.path.insert(0, r"C:\\Users\\voltu\\AppData\\Local\\hermes\\skills\\share\\scripts")
+    import os, sys
+    hermes_home = os.environ.get("HERMES_HOME", "")
+    if not hermes_home:
+        raise RuntimeError("HERMES_HOME is not set")
+    sys.path.insert(0, os.path.join(hermes_home, "skills", "share", "scripts"))
     from export import build_export, safe_write
 
     content = build_export(session_id, meta, messages)

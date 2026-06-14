@@ -18,7 +18,8 @@ Check the user's message for `--summary`:
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
 | `HERMES_SESSION_ID` | Yes | — | Current session identifier |
-| `HERMES_EXPORT_DIR` | No | `~/.hermes/exports` | Where to save the `.md` file |
+| `HERMES_HOME` | No | `~/.hermes` (Linux/macOS) or `~/AppData/Local/hermes` (Windows) | Hermes Agent data directory |
+| `HERMES_EXPORT_DIR` | No | `$HERMES_HOME/exports` | Where to save the `.md` file |
 
 ## Recommended Workflow
 
@@ -81,12 +82,15 @@ import os, sys
 
 # --- paste session_id, meta, messages from steps 1-2 ---
 
+hermes_home = os.environ.get("HERMES_HOME", "")
+if not hermes_home:
+    raise RuntimeError("HERMES_HOME is not set. Cannot find skill scripts.")
 export_dir = os.environ.get("HERMES_EXPORT_DIR", "")
 if not export_dir:
-    export_dir = os.path.join(os.path.expanduser("~"), ".hermes", "exports")
+    export_dir = os.path.join(hermes_home, "exports")
 os.makedirs(export_dir, exist_ok=True)
 
-skill_dir = os.path.join(os.path.expanduser("~"), "AppData", "Local", "hermes", "skills", "share")
+skill_dir = os.path.join(hermes_home, "skills", "share")
 sys.path.insert(0, os.path.join(skill_dir, "scripts"))
 from export import build_export, safe_write
 
@@ -106,12 +110,15 @@ import os, sys
 
 summary = """Your 3-5 sentence summary here: goal, what was built/decided, key outcomes."""
 
+hermes_home = os.environ.get("HERMES_HOME", "")
+if not hermes_home:
+    raise RuntimeError("HERMES_HOME is not set. Cannot find skill scripts.")
 export_dir = os.environ.get("HERMES_EXPORT_DIR", "")
 if not export_dir:
-    export_dir = os.path.join(os.path.expanduser("~"), ".hermes", "exports")
+    export_dir = os.path.join(hermes_home, "exports")
 os.makedirs(export_dir, exist_ok=True)
 
-skill_dir = os.path.join(os.path.expanduser("~"), "AppData", "Local", "hermes", "skills", "share")
+skill_dir = os.path.join(hermes_home, "skills", "share")
 sys.path.insert(0, os.path.join(skill_dir, "scripts"))
 from export import build_summary, safe_write
 
@@ -207,7 +214,7 @@ for msg in messages:
         continue
     lines.extend([f"## [{ts}] {label}", "", content, "", "---", ""])
 
-export_dir = os.environ.get("HERMES_EXPORT_DIR", "") or os.path.join(os.path.expanduser("~"), ".hermes", "exports")
+export_dir = os.environ.get("HERMES_EXPORT_DIR", "") or os.path.join(os.environ.get("HERMES_HOME", os.path.join(os.path.expanduser("~"), ".hermes")), "exports")
 os.makedirs(export_dir, exist_ok=True)
 filepath = os.path.join(export_dir, f"{session_id}-{datetime.now().strftime('%Y-%m-%d')}.md")
 

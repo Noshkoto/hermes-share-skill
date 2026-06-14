@@ -12,7 +12,7 @@ cp -r share ~/.hermes/skills/productivity/share/
 
 On Windows, copy to:
 ```
-C:\Users\<you>\AppData\Local\hermes\skills\share\
+$HERMES_HOME/skills/share/
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ C:\Users\<you>\AppData\Local\hermes\skills\share\
 
 ## Output
 
-Files land in `~/.hermes/exports/`:
+Files land in `$HERMES_HOME/exports/`:
 
 ```
 ~/.hermes/exports/
