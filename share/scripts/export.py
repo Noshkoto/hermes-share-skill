@@ -37,7 +37,9 @@ def safe_write(path: str, content: str) -> str:
     except Exception:
         pass
 
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
     return path
@@ -49,7 +51,7 @@ def clean_content(content: str, role: str) -> str:
     the user's actual intent, not the full injected skill markdown.
     """
     if role != "user" or not content:
-        return content
+        return content or ""
 
     stripped = content.strip()
     if stripped.startswith("[IMPORTANT:") and "---" in stripped:
@@ -66,6 +68,8 @@ def clean_content(content: str, role: str) -> str:
 
 
 def _format_timestamp(ts_raw):
+    if ts_raw is None:
+        return "unknown time"
     try:
         return datetime.fromtimestamp(ts_raw).strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
@@ -86,7 +90,7 @@ def build_export(session_id: str, meta: dict, messages: list) -> str:
         "message_count": len(messages),
         "exported_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
     }
-    lines = [_format_frontmatter(frontmatter)]
+    lines = [_format_frontmatter(frontmatter).rstrip(), ""]
 
     lines.append(f"# Session Export: {session_id}")
     lines.append("")
@@ -107,24 +111,27 @@ def build_export(session_id: str, meta: dict, messages: list) -> str:
 
         if role == "user":
             label = "User"
-            content = clean_content(msg.get("content", ""), role)
+            content = clean_content(msg.get("content") or "", role)
         elif role == "assistant":
             label = "Agent"
-            content = msg.get("content", "")
+            content = msg.get("content") or ""
             if not content and msg.get("tool_calls"):
-                names = [tc["function"]["name"] for tc in msg["tool_calls"]]
+                names = [
+                    (tc.get("function") or {}).get("name", "unknown")
+                    for tc in msg["tool_calls"]
+                ]
                 content = f"(tool calls: {', '.join(names)})"
             if not content:
                 content = "(no content)"
         elif role == "tool":
             tool_name = msg.get("tool_name", "unknown")
             label = f"Tool ({tool_name})"
-            content = msg.get("content", "")
+            content = msg.get("content") or ""
             if len(content) > 2000:
                 content = content[:2000] + f"\n\n[... truncated {len(content) - 2000} more chars ...]"
         else:
             label = role.capitalize()
-            content = msg.get("content", "")
+            content = msg.get("content") or ""
 
         if not content.strip() and not msg.get("tool_calls"):
             continue

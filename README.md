@@ -70,16 +70,18 @@ Agent: "Saved: ~/.hermes/exports/20260615_094114_363531-2026-06-15.md"
 
 ## Install
 
-Copy the skill folder into your Hermes skills directory:
+Copy the skill folder into your Hermes skills directory. It must land at
+`$HERMES_HOME/skills/share/` — the helper module is imported from
+`$HERMES_HOME/skills/share/scripts`, so this exact path matters.
 
 ```bash
-cp -r share ~/.hermes/skills/productivity/share/
+cp -r share ~/.hermes/skills/share
 ```
 
 On Windows:
 
 ```powershell
-Copy-Item -Recurse share $env:HERMES_HOME\skills\share\
+Copy-Item -Recurse share "$env:HERMES_HOME\skills\share"
 ```
 
 That's it. Hermes auto-discovers skills on restart. No config, no API keys, no dependencies.
@@ -150,10 +152,8 @@ Need to set up a remote gateway to here from my hermes desktop...
 ```
 share/
 ├── SKILL.md          # Skill definition with full workflow
-├── scripts/
-│   └── export.py     # Python helper — formatting and I/O
-└── references/
-    └── skill-evolution-notes.md
+└── scripts/
+    └── export.py     # Python helper — formatting and I/O
 ```
 
 ## Edge cases handled

@@ -25,8 +25,6 @@ Check the user's message for `--summary`:
 
 The helper module at `scripts/export.py` handles formatting, path normalization, shell-less I/O fallback, and system-injected message cleanup. Retrieve session data with `session_search`, then import the module in `execute_code` to write the file.
 
-See also: `references/skill-evolution-notes.md` for implementation notes from the last major refactor (Windows git-bash issues, `hermes_tools` limitations, helper-module pattern).
-
 ### 1. Get session info and messages
 
 Call the `session_search` tool:
@@ -162,7 +160,7 @@ if result.get("truncated"):
 
 def clean_content(content, role):
     if role != "user" or not content:
-        return content
+        return content or ""
     s = content.strip()
     if s.startswith("[IMPORTANT:") and "---" in s:
         parts = s.split("---", 2)
@@ -193,23 +191,27 @@ for msg in messages:
     role = msg.get("role", "unknown")
     if role == "session_meta":
         continue
-    ts = datetime.fromtimestamp(msg["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
+    ts_raw = msg.get("timestamp")
+    try:
+        ts = datetime.fromtimestamp(ts_raw).strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        ts = "unknown time"
     if role == "user":
-        label, content = "User", clean_content(msg.get("content", ""), role)
+        label, content = "User", clean_content(msg.get("content") or "", role)
     elif role == "assistant":
         label = "Agent"
-        content = msg.get("content", "")
+        content = msg.get("content") or ""
         if not content and msg.get("tool_calls"):
-            content = f"(tool calls: {', '.join(tc['function']['name'] for tc in msg['tool_calls'])})"
+            content = f"(tool calls: {', '.join((tc.get('function') or {}).get('name', 'unknown') for tc in msg['tool_calls'])})"
         if not content:
             content = "(no content)"
     elif role == "tool":
         label = f"Tool ({msg.get('tool_name', 'unknown')})"
-        content = msg.get("content", "")
+        content = msg.get("content") or ""
         if len(content) > 2000:
             content = content[:2000] + f"\n\n[... truncated {len(content) - 2000} more chars ...]"
     else:
-        label, content = role.capitalize(), msg.get("content", "")
+        label, content = role.capitalize(), msg.get("content") or ""
     if not content.strip() and not msg.get("tool_calls"):
         continue
     lines.extend([f"## [{ts}] {label}", "", content, "", "---", ""])
