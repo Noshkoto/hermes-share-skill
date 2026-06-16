@@ -1,67 +1,173 @@
-# /share — Hermes Agent Skill
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo.svg">
+    <img src="assets/logo.svg" width="220" alt="/share — session export for Hermes Agent">
+  </picture>
+</p>
 
-A slash command for Hermes Agent that exports the current session to a clean markdown file, or generates a short summary.
+<h1 align="center">/share</h1>
+
+<p align="center">
+  <em>One slash command. Your whole session, exported.</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/stars/Noshkoto/hermes-share-skill?style=flat-square&color=111111&label=stars" alt="Stars">
+  <img src="https://img.shields.io/badge/works%20with-Hermes%20Agent-111111?style=flat-square" alt="Hermes Agent">
+  <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT">
+  <img src="https://img.shields.io/badge/output-markdown-111111?style=flat-square" alt="Markdown">
+</p>
+
+---
+
+## The problem
+
+You just finished a two-hour coding session. Decisions were made. Bugs were fixed. Architecture was debated. You want to save the conversation — not for nostalgia, but because next week you'll need to remember *why* you chose one approach over another.
+
+Copy-pasting from the terminal is tedious. The Hermes TUI scrolls. The desktop app's history is ephemeral.
+
+## Before / after
+
+**Without /share:**
+
+```
+"You'll need to scroll back through the terminal to find that decision
+about the proxy binding. Hope you remember which session it was in."
+```
+
+**With /share:**
+
+```
+User: /share
+Agent: "Saved: ~/.hermes/exports/20260615_094114_363531-2026-06-15.md"
+
+# File contains:
+- YAML frontmatter (session_id, date, model, message_count)
+- Every message with timestamps and roles
+- Tool calls preserved (function names listed)
+- Tool output truncated at 2000 chars with a note
+- System-injected skill bodies cleaned from user messages
+- Compatible with Obsidian, Notion, any markdown editor
+```
+
+## How it works
+
+```
+1. You type /share              →  Full export mode
+   or /share --summary          →  Summary mode (3-5 sentence recap)
+
+2. Agent fetches session data   →  session_search reads the full transcript
+
+3. Long sessions?               →  Auto-paginates past the 30-message limit
+                                   with gap-detection and midpoint scrolling
+
+4. Python formatter runs         →  Cleans system injections, formats timestamps,
+                                   truncates huge tool output, writes to disk
+
+5. File lands in exports/        →  Machine-readable YAML frontmatter
+                                   Human-readable markdown body
+```
 
 ## Install
 
-Copy the `share/` directory to your skills folder:
+Copy the skill folder into your Hermes skills directory:
 
 ```bash
 cp -r share ~/.hermes/skills/productivity/share/
 ```
 
-On Windows, copy to:
+On Windows:
+
+```powershell
+Copy-Item -Recurse share $env:HERMES_HOME\skills\share\
 ```
-$HERMES_HOME/skills/share/
-```
+
+That's it. Hermes auto-discovers skills on restart. No config, no API keys, no dependencies.
 
 ## Usage
 
-| Command | What it does |
-|---------|-------------|
-| `/share` | Exports the full conversation to `~/.hermes/exports/{session_id}-{date}.md` with YAML frontmatter, timestamps, roles, and message content |
-| `/share --summary` | Generates a 3-5 sentence recap and saves to `~/.hermes/exports/{session_id}-{date}-summary.md` |
+| Command | Output |
+|---------|--------|
+| `/share` | Full session export with every message, timestamp, and tool call |
+| `/share --summary` | 3-5 sentence recap — goal, decisions, outcomes |
+
+## Features
+
+- **YAML frontmatter** — session_id, date, source, model, message_count, exported_at. Obsidian-compatible.
+- **Auto-pagination** — scrolls past the 30-message truncation limit. Gap detection ensures nothing is skipped.
+- **Message cleanup** — system-injected skill bodies replaced with short descriptions. No noise.
+- **Tool output truncation** — outputs over 2000 chars get a summary note instead of filling pages.
+- **Fallback I/O** — uses Python's raw `open()` when `hermes_tools.write_file` isn't available (Windows git-bash).
+- **Timestamp formatting** — Unix epoch converted to readable `YYYY-MM-DD HH:MM:SS` in every message header.
+- **Configurable output dir** — set `HERMES_EXPORT_DIR` to change where files go.
 
 ## Output
 
-Files land in `$HERMES_HOME/exports/`:
-
 ```
 ~/.hermes/exports/
-├── 20260614_084636_6d2eba-2026-06-14.md          # full export
-├── 20260614_084636_6d2eba-2026-06-14-summary.md   # summary
+├── 20260615_094114_363531-2026-06-15.md          # full export
+├── 20260615_094114_363531-2026-06-15-summary.md   # --summary mode
+├── 20260616_123456_7b7474-2026-06-16.md
 ```
 
-Full exports include YAML frontmatter with `session_id`, `date`, `source`, `model`, `message_count`, and `exported_at` — compatible with Obsidian, Notion, and other markdown note apps.
+Each file opens in any markdown editor:
 
-## How it works
+```
+---
+{
+  "session_id": "20260615_094114_363531",
+  "date": "June 15, 2026 at 09:41 AM",
+  "source": "cli",
+  "model": "deepseek-v4-flash",
+  "message_count": 137,
+  "exported_at": "2026-06-15 14:30:00 UTC"
+}
+---
 
-1. You type `/share` or `/share --summary`
-2. The agent retrieves session data via `session_search(session_id=...)`
-3. A Python helper module (`scripts/export.py`) formats the markdown and writes it to disk
-4. The file path is printed in your terminal
+# Session Export: 20260615_094114_363531
 
-### Features
+**Date:** June 15, 2026
+**Source:** cli
+**Model:** deepseek-v4-flash
 
-- **YAML frontmatter** — machine-readable metadata for Obsidian/Notion
-- **Message cleanup** — strips Hermes system-injected skill bodies from user messages
-- **Fallback I/O** — works even when `hermes_tools.write_file` has shell issues (common on Windows git-bash)
-- **Long-session pagination** — scrolls past the 30-message truncation limit automatically
-- **Configurable output dir** — set `HERMES_EXPORT_DIR` to change where files are saved
-- **Tool output truncation** — tool output >2000 chars is truncated with a note
-- **Timestamp formatting** — Unix timestamps converted to readable `YYYY-MM-DD HH:MM:SS`
+---
+
+## [2026-06-15 09:41:11] User
+
+Need to set up a remote gateway to here from my hermes desktop...
+
+---
+```
 
 ## Requirements
 
 - Hermes Agent (any recent version)
 - `session_search` tool available
-- `HERMES_SESSION_ID` env var (set automatically by Hermes)
+- `HERMES_SESSION_ID` environment variable (set automatically)
 
 ## Files
 
 ```
 share/
-├── SKILL.md          # Skill definition and invocation instructions
-└── scripts/
-    └── export.py     # Python helper module (formatting & I/O)
+├── SKILL.md          # Skill definition with full workflow
+├── scripts/
+│   └── export.py     # Python helper — formatting and I/O
+└── references/
+    └── skill-evolution-notes.md
 ```
+
+## Edge cases handled
+
+| Scenario | Behavior |
+|----------|----------|
+| Empty session | Reports "No messages found" with guidance |
+| Missing session ID | Reports "HERMES_SESSION_ID not set" |
+| Long session (>30 msgs) | Auto-paginates with gap detection |
+| Huge tool output | Truncated at 2000 chars + note |
+| Assistant with only tool_calls | Lists function names used |
+| Windows git-bash write failures | Falls back to raw `open()` |
+| System-injected skill bodies | Stripped and replaced with clear description |
+
+---
+
+*"If it mattered enough to spend two hours on, it matters enough to export."*
